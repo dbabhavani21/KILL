@@ -1,0 +1,45 @@
+begin
+dbms_resource_manager.create_pending_area();
+dbms_resource_manager.create_consumer_group(
+CONSUMER_GROUP=>'CG_STOP_BLOCKERS',
+COMMENT=>'CG for stop blocking'
+);
+dbms_resource_manager.create_plan(
+PLAN=> 'STOP_BLOCKERS',
+COMMENT=>'Plan for stop blocking'
+);
+dbms_resource_manager.create_plan_directive(
+PLAN=> 'STOP_BLOCKERS',
+GROUP_OR_SUBPLAN=>'CG_STOP_BLOCKERS',
+COMMENT=>'Directive',
+MAX_IDLE_BLOCKER_TIME => 60);
+dbms_resource_manager.create_plan_directive(
+PLAN=> 'STOP_BLOCKERS',
+GROUP_OR_SUBPLAN=>'OTHER_GROUPS',
+COMMENT=>'leave others alone'
+);
+DBMS_RESOURCE_MANAGER.VALIDATE_PENDING_AREA;
+DBMS_RESOURCE_MANAGER.SUBMIT_PENDING_AREA();
+end;
+/
+
+
+exec dbms_resource_manager_privs.grant_switch_consumer_group('PERF_TEST','CG_STOP_BLOCKERS',false);
+exec dbms_resource_manager.set_initial_consumer_group('PERF_TESTT','CG_STOP_BLOCKERS');
+ALTER SYSTEM SET RESOURCE_MANAGER_PLAN = STOP_BLOCKERS;
+
+
+SQL> conn scott/tiger
+Connected.
+
+SQL> create table t as select 1 x from dual;
+
+Table created.
+
+SQL> delete from t;
+
+1 row deleted.
+
+Reference :: https://connor-mcdonald.com/2016/10/19/locked-rows-and-lunch-breaks-a-simple-fix/
+
+
